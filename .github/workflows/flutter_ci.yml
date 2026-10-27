@@ -55,3 +55,19 @@ jobs:
           name: app-debug-apk
           path: build/app/outputs/flutter-apk/app-debug.apk
           retention-days: 7
+
+      - name: Distribute to Firebase App Distribution
+        if: github.event_name != 'pull_request'
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          FIREBASE_APP_ID: ${{ secrets.FIREBASE_APP_ID }}
+          FIREBASE_TESTERS: ${{ secrets.FIREBASE_TESTERS }}
+          RELEASE_NOTES: ${{ github.event.head_commit.message || 'Manual build' }}
+        run: |
+          echo "$FIREBASE_SERVICE_ACCOUNT" > "$RUNNER_TEMP/firebase-sa.json"
+          export GOOGLE_APPLICATION_CREDENTIALS="$RUNNER_TEMP/firebase-sa.json"
+          npx --yes firebase-tools@15.33.0 appdistribution:distribute \
+            build/app/outputs/flutter-apk/app-debug.apk \
+            --app "$FIREBASE_APP_ID" \
+            --testers "$FIREBASE_TESTERS" \
+            --release-notes "$RELEASE_NOTES"
